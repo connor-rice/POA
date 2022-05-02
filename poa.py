@@ -1,4 +1,4 @@
-from Crypto.Cipher import AES
+from Cryptodome.Cipher import AES
 
 key = "aaaabbbbccccdddd"
 iv = "1111222233334444"
@@ -29,3 +29,6 @@ def pkcs7(plaintext):
     padbytes = 16 - len(plaintext) % 16
     pad = padbytes * chr(padbytes)
     return plaintext + pad
+
+
+print(encr('Hello World!').hex())
