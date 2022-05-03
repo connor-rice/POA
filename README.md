@@ -200,7 +200,7 @@ Here, the value of 147 is found. From filling ciphertext[16:31] with "A" charact
 
 ## Calculating the Intermediate State
 
-To complete a POA, an attacker must find the values of the intermediate state. The intermediate state is the part between the decryption and the XOR operation against the previous block.
+To complete a POA, an attacker must find the values of the intermediate state. The intermediate state is the part between the decryption and the XOR operation against the previous block. Remember, the goal is to inject The word "WIN" into the plaintext by manipulating the padding scheme and finding the intermediate state values.
 
 To calcuate the intermediate state, refer to the diagram below to see how the last byte of plaintext is calculated:
 
@@ -214,7 +214,129 @@ We add ```ciphertext[31]``` to both side of the equation, resulting in ```interm
 
 On the left side, ```intermediate[47]``` is XOR'd twice, meaning those two ```ciphertext[31]``` on the left side of the equation cancel. This is due to the nature of how XOR works; it is its own inverse - XOR'ing twice with the same byte gets you back where you started. Now we have ```intermediate[47] = ciphertext[31] ^ plaintext[47]```.
 
-We know that ``plaintext[47]`` must equal 1 since the Oracle returned a valid padding scheme, which turns the equation into ```intermediate[47] = ciphertext[31] ^ 1```. Do the XOR math to solve for ```intermediate[47]```, and you have ```intermediate[47] = 146```.
+We know that ```plaintext[47]``` must equal 1 since the Oracle returned a valid padding scheme, which turns the equation into ```intermediate[47] = ciphertext[31] ^ 1```. Do the XOR math to solve for ```intermediate[47]```, and you have ```intermediate[47] = 146```.
 
+So now the value for ```intermediate[46]``` must be found. To find this, we need to make the last block of plaintext contain two padding bytes, or ```0202```. This means ```plaintext[47]``` will equal 2.
 
-The idea of a padding oracle attack rests on this small hint given to the attacker. This demonstration is simply a demonstration to a complex attack involving cryptography, an already complext topic. This demonstration does not reflect how POAs are done in the real world, it just provides a conceptual foundation behind how they are done.
+![image](https://user-images.githubusercontent.com/82915527/166504928-d90b0c0f-9304-4211-aee3-42cccfbf87bb.png)
+
+The value of ```ciphertext[31]``` can then be calculated: ```ciphertext[31] = intermediate[47] ^ plaintext[47]```, which equals ```ciphertext[31] = 146 ^ 2```, making ```ciphertext[31] = 144```.
+
+With this information, the value for ```ciphertext[30]``` can be found through the following commands (you may need to press enter twice to receive output):
+
+```
+prefix = original[0:16] + "AAAAAAAAAAAAAA"
+for i in range(256):
+  mod = prefix + chr(i) + chr(144) + original[32:]
+  if decr(mod) != "PADDING ERROR":
+    print i, "is correctly padded"
+```
+![image](https://user-images.githubusercontent.com/82915527/166506859-2604020d-10c3-4691-bfc2-0346785c0796.png)
+
+Now that the value for ```ciphertext[30]``` is known, we can calculate for ```intermedaite[46]```. In order to make the padding valid, ```ciphertext[30] = 6``` and ```plaintext[46] = 2```, ```intermediate[46] = 6 ^ 2```, which returns ```intermediate[46] = 4```.
+
+To find ```intermediate[45]```, we follow the same pattern to find ```intermediate[46]```, force three padding bytes at the end of the plaintext block, making ```plaintext[46] = 3``` and ```plaintext[47] = 3```. With these values set, we can find the values of ```ciphertext[30]``` and ```ciphertext[31]```. Recal the equation to find ```ciphertext[31]```, ```ciphertext[31] = intermediate[47] ^ plaintext[47]```. With the padding byte of 3, the resulting equation is ```ciphertext[31] = 146 ^ 3``` which equals 145. For ```ciphertext[30]```, we set it equal to ```intermediate[46] ^ plaintext[46]```, which results in ```ciphertext[30] = 4 ^ 3``` which equals 7.
+
+With the values of ```ciphertext[30]``` and ```ciphertext[31]``` found, we can add this to the modified ciphertext to find the value of ```ciphertext[29]```.
+
+```
+prefix = original[0:16] + "AAAAAAAAAAAAA"
+for i in range(256):
+  mod = prefix + chr(i) + chr(7) + chr(145) + original[32:]
+  if decr(mod) != "PADDING ERROR":
+    print i, "is correctly padded"
+```
+![image](https://user-images.githubusercontent.com/82915527/166510433-f19f80ca-e644-4ce8-99e3-b03c58252dd8.png)
+
+More XOR math. It it known that when ```ciphertext[29] = 102``` and ```plaintext[45] = 3```, the Oracle returns that the padding is valid. With this information, we can find ```intermediate[45]``` by ```intermediate[45] = ciphertext[29] ^ plaintext[45] = 102 ^ 3 = 101```. Therefore, ```intermediate[45] = 101```.
+
+Rinse and repeat, except with four bytes of padding now. Don't worry this is the last calculation needed before injecting the word "WIN" into the plaintext.
+
+Four bytes of padding are needed to find ```intermediate[44]```, so ```plaintext[45]```, ```plaintext[46]```, and ```plaintext[47]``` all equal 4. With this, the values for ```ciphertext[29]```, ```ciphertext[30]```, and ```ciphertext[31]``` need to be calculated using the same method done previously:
+
+```
+ciphertext[29] = intermediate[45] ^ plaintext[45] -> ciphertext[29] = 101 ^ 4 -> ciphertext[29] = 97
+ciphertext[29] = intermediate[46] ^ plaintext[46] -> ciphertext[30] = 4 ^ 4 -> ciphertext[30] = 0
+ciphertext[29] = intermediate[47] ^ plaintext[47] -> ciphertext[31] = 146 ^ 4 -> ciphertext[31] = 150
+```
+
+With these values for ```ciphertext[29]```, ```ciphertext[30]```, and ```ciphertext[31]```, we do the same thing we have been doing: find the right padding scheme. Enter the following command to find the value of ```ciphertext[28]``` (you may need to press enter twice to receive output):
+
+```
+prefix = original[0:16] + "AAAAAAAAAAAA"
+for i in range(256):
+  mod = prefix + chr(i) + chr(97) + chr(0) + chr(150) + original[32:]
+  if decr(mod) != "PADDING ERROR":
+    print i, "is correctly padded"
+```
+
+![image](https://user-images.githubusercontent.com/82915527/166515463-cd715a21-332e-4c47-9d5c-9d8c0e95e79a.png)
+
+And finally, the last bit of XOR math. So, we know that when ```ciphertext[28] = 235``` and ```plaintext[45] = 4```, the Oracle reutrns a valid padding check. Now we can calculate ```intermediate[44]``` with the foolowing equation:
+
+```
+intermediate[44] = ciphertext[28] ^ plaintext[44] -> intermediate[44] = 235 ^ 4 -> intermediate[45] = 239
+```
+
+All together now! Here is what we know about the last four bytes of the intermediate state:
+
+```
+intermediate[44] = 239
+intermediate[45] = 101
+intermediate[46] = 4
+intermediate[47] = 146
+```
+
+## Encoding "WIN"
+
+What a journey so far. But what can we do with the information obtained from all that XOR math around the intermediate state? Well, we had a goal at the start of this process: encode the word "WIN" into the plaintext. To do this, we want to encode that word with a single byte of padding since that will return a valid padding check by the Oracle. Since "WIN" is a three letter word, and one byte of padding is needed, we set each letter and single byte of padding equal to the last four bytes of the plaintext block:
+
+```
+cleartext[44] = ord("W")
+cleartext[45] = ord("I")
+cleartext[46] = ord("N")
+cleartext[47] = 1
+```
+But these are the plaintext bytes, not the ciphertext bytes. We want to mess with the ciphertext bytes because when the ciphertext is decrypted, the fruits of your labor will show. So, with the values of the last four bytes from the intermediate state found in conjuction with which ciphertext bytes we want to change, the XOR math looks like this:
+
+```
+ciphertext[28] = cleartext[44] ^ intermediate[44] -> ciphertext[28] = ord("W") ^ 239
+ciphertext[29] = cleartext[45] ^ intermediate[45] -> ciphertext[29] = ord("I") ^ 101
+ciphertext[30] = cleartext[46] ^ intermediate[46] -> ciphertext[30] = ord("N") ^ 4
+ciphertext[31] = cleartext[47] ^ intermediate[47] -> ciphertext[31] = 1 ^ 146
+```
+Finally, enter those values into the terminal with the folliwng:
+
+```
+c28 = ord("W") ^ 239
+c29 = ord("I") ^ 101
+c30 = ord("N") ^ 4
+c31 = 1 ^ 146
+ciphertext = original[0:28] + chr(c28) + chr(c29) + chr(c30) + chr(c31) + original[32:] 
+```
+## Decoding the New Ciphertext
+
+Now for the proof of concept. Enter the following command:
+
+```
+decr(ciphertext)
+```
+![image](https://user-images.githubusercontent.com/82915527/166518678-831cb34e-0064-47c8-8454-0ab4f2193450.png)
+
+Highlighted is the word "WIN", just like this module set out to do. From the output, you can see some of the padding scheme used. The original text that was encrypted was only 40 bytes long, leaving 8 bytes of padding, hence the ```08080808``` you see. At the end you see the single byte of padding, ```01```.
+Congrats! You completed a POA!
+
+# Conclusion
+
+The idea of a padding oracle attack rests on a small hint given to the attacker by the Oracle. This module simply demonstrates a complex attack involving cryptography, an already complext topic. This demonstration does not reflect how POAs are done in the real world, it just provides a conceptual foundation behind how they are done. These days, POAs are hardly seen anymore as they require a wealth of knowledge of cryptography and how to manipulate the encryption/decryption process and access to an Oracle. Simply hiding the padding validation check renders this attack useless since no hint is given, which is the method most vendors use to prevent POAs. Besides, there are many other ways to get information through illegal access, such as SQL Injection, XSS, CSRF, CVEs, or anything from the OWASP Top Ten.
+
+# References
+
+https://pypi.org/project/pycrypto/
+
+https://github.com/pycrypto/pycrypto
+
+https://www.pycrypto.org/api/current/
+
+https://en.wikipedia.org/wiki/Padding_oracle_attack
+
