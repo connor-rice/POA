@@ -43,6 +43,8 @@ This is all involved in the ecnryption of AES in CBC mode. For the reverse, decr
 
 ![image](https://user-images.githubusercontent.com/82915527/166332954-1d57a4cc-fe45-40b2-a2a3-8966236bb4fa.png)
 
+## Inside the Terminal
+
 Inside your Linux machine, open a terminal and enter ```python2```. This will put you into Python interactive mode where instructions can be sent and have responses in real time, almost similar to an IDE. To show how the padding works, enter these commands into the terminal:
 
 ```
@@ -54,6 +56,8 @@ a = "This simple sentence is forty-seven bytes long."
 ```
 
 These commands will set the intial values AES-CBC will use to encrypt. Again, CBC needs a key and an IV, both of which are 16 bytes long. It will encrypt the value set for ```a```. Since the plaintext is 47 bytes long, padding will be introduced. 
+
+## Modifying and Viewing the Ciphertext
 
 Next, to show how tinkering with the ciphertext changes the only certain parts of the plaintext, the original ciphertext and a modified ciphertext will be compared against each other. To create these two ciphertexts, enter these follwing commands:
 
@@ -89,3 +93,41 @@ When decrypting ```ciphertext``` and ```mod```, you can clearly see the differen
 
 ![image](https://user-images.githubusercontent.com/82915527/166392047-bda7b70a-f508-49d1-b92e-ad17bbbab87b.png)
 
+## The Code
+
+Included in this repository is a Python script called ```poa.py```. It is located in the ```main``` branch. Copy this script into the home directory of your Linux machine so the function with ```poa.py``` can be called. Be sure the extension of the file is ```.py``` or the interactive mode will not be able to read it.
+
+## Encrypting Non-Multiple Byte Length Plaintext
+
+To keep things simple, the same value for ```a``` will remain the same. Enter these commands:
+
+```
+from poa import encr, decr
+a = "This simple sentence is forty-seven bytes long."
+c = encr(a)
+print c.encode("hex")
+```
+
+The function ```encr``` is called to encrypt the value ```a``` and store it in ```c```. It will then print the ciphertext in hexadecimal which will look like this:
+
+![image](https://user-images.githubusercontent.com/82915527/166393407-2294e94a-456a-48d0-b80f-8c2155fd3b80.png)
+
+To decrypt it, enter these following commands:
+
+```
+d = decr(c)
+print d
+print d.encode("hex")
+```
+
+The output will look like this:
+
+![image](https://user-images.githubusercontent.com/82915527/166393517-791f507f-1689-4cbc-b1de-3ae85e356510.png)
+
+Notice how the last byte is ```01```. This means there is a single byte of padding due to the fact that the plaintext is 47 bytes long which is not a perfect multiple of the needed 16 byte blocks. After the command ```print d``` is executed, the output has a strange character at the end of the decrypted ciphertext. This is because the byte is not printable in the ASCII version, but it is printable in hexadecimal.
+
+Since only one byte of padding is needed, per Public Key Cryptography Standard #7, or PKCS#7, use ```01``` to fill in the rest of the block. This padding is incremented depending on how many bytes of padding are needed. For example, if two bytes of padding are needed, us ```0202```. If three bytes of padding are needed, use ```030303```. This continues all the way up to needing potentially 15 bytes, which is ```0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f```. Since CBC works in 16 byte blocks, no more padding is needed beyond that point.
+
+## The Crutch
+
+Here is where things become interesting. Recall the term Oracle
