@@ -4,7 +4,7 @@ key = "aaaabbbbccccdddd"
 iv = "1111222233334444"
 
 
-def decr(ciphertext):
+def decrypt(ciphertext):
     cipher = AES.new(key, AES.MODE_CBC, iv)
     return ispkcs7(cipher.decrypt(ciphertext))
 
@@ -19,7 +19,7 @@ def ispkcs7(plaintext):
     return plaintext
 
 
-def encr(plaintext):
+def encrypt(plaintext):
     cipher = AES.new(key, AES.MODE_CBC, iv)
     ciphertext = cipher.encrypt(pkcs7(plaintext))
     return ciphertext
@@ -30,5 +30,3 @@ def pkcs7(plaintext):
     pad = padbytes * chr(padbytes)
     return plaintext + pad
 
-
-print(encr('Hello World!').hex())
